@@ -1539,6 +1539,10 @@ public enum ItemList implements IItemContainer {
 
     Machine_Multi_IndustrialBrewery,
 
+    Machine_Multi_ChamberCentrifuge,
+    Chamber_Casing,
+    Chamber_Grate,
+
     Machine_Multi_IndustrialLaserEngraver,
     Laser_Plate,
     Casing_Laser,
@@ -1744,6 +1748,12 @@ public enum ItemList implements IItemContainer {
     Casing_Item_Pipe_Quantium,
     Casing_Item_Pipe_Fluxed_Electrum,
     Casing_Item_Pipe_Black_Plutonium,
+
+    Casing_Cable,
+    Casing_Graphite_Moderator,
+    Casing_Insulated_Fluid_Pipe,
+    Casing_Beryllium_Integrated_Reactor,
+    Casing_Refined_Graphite,
 
     MobRep_LV,
     MobRep_MV,
@@ -2670,6 +2680,9 @@ public enum ItemList implements IItemContainer {
     Intensely_Bonded_Netherite_Nanoparticles,
     Hot_Netherite_Scrap,
     LargeMolecularAssembler,
+    Beryllium_Shielding_Plate,
+    Alumina_Support_Ring,
+    Alumina_Support_Ring_Raw,
     Prismarine_Precipitate,
     Prismatic_Crystal,
     Radiation_Proof_Prismatic_Naquadah_Composite_Sheet,
@@ -2742,6 +2755,7 @@ public enum ItemList implements IItemContainer {
 
     MagLevHarness,
 
+    ManaFly,
     // semicolon after the comment to reduce merge conflicts
     ;
 
