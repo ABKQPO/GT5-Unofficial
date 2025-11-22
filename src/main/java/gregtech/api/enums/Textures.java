@@ -384,6 +384,11 @@ public class Textures {
         OVERLAY_FRONT_MULTI_BREWERY_ACTIVE_GLOW,
         OVERLAY_FRONT_MULTI_BREWERY_GLOW,
 
+        OVERLAY_FRONT_MULTI_LATEX,
+        OVERLAY_FRONT_MULTI_LATEX_ACTIVE,
+        OVERLAY_FRONT_MULTI_LATEX_ACTIVE_GLOW,
+        OVERLAY_FRONT_MULTI_LATEX_GLOW,
+
         LASER_PLATE,
         MACHINE_CASING_LASER,
         OVERLAY_FRONT_ENGRAVER,
@@ -1934,6 +1939,13 @@ public class Textures {
         NANITE_CORE,
         NANITE_SHIELDING_FRAME,
         OVERLAY_ENERGY_IN_DEBUG,
+        OVERLAY_BUS_IN_DEBUG,
+
+        OVERLAY_HATCH_IN_DEBUG,
+
+        COKE_OVEN_CASING,
+        COKE_OVEN_OVERLAY_INACTIVE,
+        COKE_OVEN_OVERLAY_ACTIVE,
 
         // semicolon after the comment to reduce merge conflicts
         ;
