@@ -33,17 +33,17 @@ import gregtech.api.util.extensions.ArrayExt;
 public class GTRecipeBuilder {
 
     // debug mode expose problems. panic mode help you check nothing is wrong-ish without you actively monitoring
-    private static final boolean DEBUG_MODE_NULL;
+    public static final boolean DEBUG_MODE_NULL;
     // Any stable release should be tested at least once with this: -Dgt.recipebuilder.panic.null=true
-    private static boolean PANIC_MODE_NULL;
-    private static final boolean DEBUG_MODE_INVALID;
-    private static final boolean DEBUG_MODE_FULL_ENERGY;
+    public static boolean PANIC_MODE_NULL;
+    public static final boolean DEBUG_MODE_INVALID;
+    public static final boolean DEBUG_MODE_FULL_ENERGY;
     // Any stable release should be tested at least once with this: -Dgt.recipebuilder.panic.invalid=true
-    private static final boolean PANIC_MODE_INVALID;
+    public static final boolean PANIC_MODE_INVALID;
     public static final boolean DEBUG_MODE_COLLISION;
 
     // Any stable release should be tested at least once with this: -Dgt.recipebuilder.panic.collision=true
-    private static final boolean PANIC_MODE_COLLISION;
+    public static final boolean PANIC_MODE_COLLISION;
 
     // This should only be enabled in non stable instances only with -Dgt.recipebuilder.recipe_collision_check=true
     public static final boolean ENABLE_COLLISION_CHECK;
@@ -382,7 +382,12 @@ public class GTRecipeBuilder {
             } else if (input instanceof OreDictItemStack ods) {
                 altOreIds[i] = OreDictionary.getOreID(ods.mOreName);
                 ArrayList<ItemStack> ores = GTOreDictUnificator.getOres(ods.mOreName);
-                if (ores.isEmpty()) continue;
+                if (ores.isEmpty()) {
+                    GTLog.err
+                        .println("Warning: OreDict entry \"" + ods.mOreName + "\" is empty; recipe will be skipped.");
+                    alts[i] = GTValues.emptyItemStackArray;
+                    continue;
+                }
                 ArrayList<ItemStack> list = new ArrayList<>(ores.size());
                 // noinspection ForLoopReplaceableByForEach
                 for (int j = 0, oresSize = ores.size(); j < oresSize; j++) {
@@ -394,7 +399,11 @@ public class GTRecipeBuilder {
                 if (arr.length != 2) continue;
                 altOreIds[i] = OreDictionary.getOreID(arr[0].toString());
                 ArrayList<ItemStack> ores = GTOreDictUnificator.getOres(arr[0]);
-                if (ores.isEmpty()) continue;
+                if (ores.isEmpty()) {
+                    GTLog.err.println("Warning: OreDict entry \"" + arr[0] + "\" is empty; recipe will be skipped.");
+                    alts[i] = GTValues.emptyItemStackArray;
+                    continue;
+                }
                 int size = ((Number) arr[1]).intValue();
                 ArrayList<ItemStack> list = new ArrayList<>(ores.size());
                 // noinspection ForLoopReplaceableByForEach

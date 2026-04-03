@@ -55,14 +55,11 @@ public class MTETieredMachineBlockBaseGui<T extends MTETieredMachineBlock> {
 
     protected void registerSyncValues(PanelSyncManager syncManager) {
 
-        syncManager.registerSlotGroup("item_inv", 1);
+        syncManager.registerSlotGroup("item_inv", 1, false);
 
         BooleanSyncValue powerSwitchSyncer = new BooleanSyncValue(baseMetaTileEntity::isAllowedToWork, bool -> {
-            if (isPowerSwitchDisabled()) return;
             if (bool) baseMetaTileEntity.enableWorking();
-            else {
-                baseMetaTileEntity.disableWorking();
-            }
+            else baseMetaTileEntity.disableWorking();
         });
         syncManager.syncValue("powerSwitch", powerSwitchSyncer);
 
@@ -93,8 +90,7 @@ public class MTETieredMachineBlockBaseGui<T extends MTETieredMachineBlock> {
 
     protected Flow createContentHolderRow(ModularPanel panel, PanelSyncManager syncManager) {
         Flow contentFlow = Flow.row()
-            .size(getContentRowWidth(), getContentRowHeight())
-            .paddingBottom(4);
+            .size(getContentRowWidth(), getContentRowHeight());
         contentFlow.child(createContentSection(panel, syncManager));
         return contentFlow;
     }
@@ -137,9 +133,11 @@ public class MTETieredMachineBlockBaseGui<T extends MTETieredMachineBlock> {
             .reverseLayout(true)
             .coverChildren()
             .align(Alignment.BottomRight)
+            .paddingBottom(2)
             .paddingRight(4);
 
-        cornerFlow.childIf(this.doesAddCircuitSlot(), () -> this.createCircuitSlot(syncManager));
+        cornerFlow.childIf(this.doesAddGregTechLogo(), this::createLogo)
+            .childIf(this.doesAddCircuitSlot(), () -> this.createCircuitSlot(syncManager));
 
         return cornerFlow;
     }
@@ -174,8 +172,12 @@ public class MTETieredMachineBlockBaseGui<T extends MTETieredMachineBlock> {
             .marginTop(4);
     }
 
-    protected boolean isPowerSwitchDisabled() {
-        return false;
+    protected boolean supportsPowerSwitch() {
+        return true;
+    }
+
+    protected boolean supportsMuffler() {
+        return true;
     }
 
     protected IDrawable.DrawableWidget createLogo() {
@@ -197,8 +199,8 @@ public class MTETieredMachineBlockBaseGui<T extends MTETieredMachineBlock> {
         return Flow.column()
             .coverChildren()
             .align(Alignment.TopRight)
-            .child(createMufflerButton())
-            .child(createPowerSwitchButton());
+            .childIf(supportsMuffler(), this::createMufflerButton)
+            .childIf(supportsPowerSwitch(), this::createPowerSwitchButton);
     }
 
     protected ToggleButton createMufflerButton() {
