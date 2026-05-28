@@ -2783,6 +2783,8 @@ public enum ItemList implements IItemContainer {
     StableBosonContainmentUnit,
     StableEmptyContainmentUnit,
 
+    Galactus,
+
     ManaFly,
     DebugEnergyHatch,
 
