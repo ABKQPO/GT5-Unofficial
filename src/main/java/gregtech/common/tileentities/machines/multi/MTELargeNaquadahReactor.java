@@ -20,7 +20,6 @@ import java.util.List;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.EnumChatFormatting;
-import net.minecraft.util.StatCollector;
 import net.minecraftforge.common.util.ForgeDirection;
 import net.minecraftforge.fluids.FluidRegistry;
 import net.minecraftforge.fluids.FluidStack;
@@ -42,12 +41,16 @@ import gregtech.api.enums.Materials;
 import gregtech.api.enums.Textures;
 import gregtech.api.interfaces.ITexture;
 import gregtech.api.interfaces.metatileentity.IMetaTileEntity;
+import gregtech.api.interfaces.tileentity.IGregTechDeviceInformation;
 import gregtech.api.interfaces.tileentity.IGregTechTileEntity;
 import gregtech.api.metatileentity.implementations.MTEHatchDynamo;
 import gregtech.api.recipe.RecipeMap;
 import gregtech.api.recipe.check.CheckRecipeResult;
 import gregtech.api.recipe.check.CheckRecipeResultRegistry;
 import gregtech.api.render.TextureFactory;
+import gregtech.api.structure.error.ErrorType;
+import gregtech.api.structure.error.StructureError;
+import gregtech.api.structure.error.StructureErrors;
 import gregtech.api.util.GTModHandler;
 import gregtech.api.util.GTRecipe;
 import gregtech.api.util.GTUtility;
@@ -131,12 +134,12 @@ public class MTELargeNaquadahReactor extends TTMultiblockBase implements ISurviv
 
     @Override
     public void construct(ItemStack itemStack, boolean hintsOnly) {
-        structureBuild_EM(STRUCTURE_PIECE_MAIN, OFFSET_X, OFFSET_Y, OFFSET_Z, itemStack, hintsOnly);
+        buildPiece(STRUCTURE_PIECE_MAIN, itemStack, hintsOnly, OFFSET_X, OFFSET_Y, OFFSET_Z);
     }
 
     @Override
     public String[] getStructureDescription(ItemStack itemStack) {
-        return DescTextLocalization.addText("MultiNqGenerator.hint", 8);
+        return DescTextLocalization.addText("LargeNaquadahReactor.hint", 7);
     }
 
     @Override
@@ -256,20 +259,12 @@ public class MTELargeNaquadahReactor extends TTMultiblockBase implements ISurviv
     @Override
     public String[] getInfoData() {
         String[] info = super.getInfoData();
-        info[4] = StatCollector.translateToLocalFormatted(
-            "gg.scanner.info.generator.generates",
-            EnumChatFormatting.RED + formatNumber(Math.abs(this.trueOutput)) + EnumChatFormatting.RESET);
-        info[6] = StatCollector.translateToLocal("gg.scanner.info.generator.problems") + " "
-            + EnumChatFormatting.RED
-            + (this.getIdealStatus() - this.getRepairStatus())
-            + EnumChatFormatting.RESET
-            + " "
-            + StatCollector.translateToLocal("gg.scanner.info.generator.efficiency")
-            + " "
-            + EnumChatFormatting.YELLOW
-            + trueEff
-            + EnumChatFormatting.RESET
-            + " %";
+        info[4] = IGregTechDeviceInformation
+            .encode("gg.scanner.info.generator.generates", "§c" + formatNumber(Math.abs(this.trueOutput)) + "§r");
+        info[6] = IGregTechDeviceInformation.encode(
+            "GT5U.multiblock.problems.efficiency.fmt",
+            this.getIdealStatus() - this.getRepairStatus(),
+            trueEff + " %");
         return info;
     }
 
@@ -344,14 +339,19 @@ public class MTELargeNaquadahReactor extends TTMultiblockBase implements ISurviv
     }
 
     @Override
-    public boolean checkMachine_EM(IGregTechTileEntity aBaseMetaTileEntity, ItemStack aStack) {
+    public void checkMachine(IGregTechTileEntity aBaseMetaTileEntity, ItemStack aStack, List<StructureError> errors) {
         casingAmount = 0;
-        return structureCheck_EM(STRUCTURE_PIECE_MAIN, OFFSET_X, OFFSET_Y, OFFSET_Z) && checkHatch()
-            && casingAmount >= 130;
-    }
-
-    public boolean checkHatch() {
-        return mMaintenanceHatches.size() == 1 && (mDynamoHatches.size() + eDynamoMulti.size()) == 1;
+        if (!checkPiece(STRUCTURE_PIECE_MAIN, OFFSET_X, OFFSET_Y, OFFSET_Z, errors)) return;
+        checkCasingMin(errors, casingAmount, 130);
+        checkOneMaintenanceHatch(errors);
+        checkHasInputHatch(errors);
+        checkHasOutputHatch(errors);
+        int dynamoCount = mDynamoHatches.size() + eDynamoMulti.size();
+        if (dynamoCount == 0) {
+            errors.add(StructureErrors.hatchCount(ErrorType.TOO_FEW, Dynamo, 0, 1));
+        } else if (dynamoCount > 1) {
+            errors.add(StructureErrors.hatchCount(ErrorType.TOO_MANY, Dynamo, dynamoCount, 1));
+        }
     }
 
     @Override
@@ -379,11 +379,6 @@ public class MTELargeNaquadahReactor extends TTMultiblockBase implements ISurviv
                     EnumChatFormatting.AQUA,
                     LiquidAirConsumptionPerSecond,
                     EnumChatFormatting.GRAY))
-            .addInfo(
-                "The reactor will explode when there is more than" + EnumChatFormatting.RED
-                    + " ONE"
-                    + EnumChatFormatting.GRAY
-                    + " type of fuel in hatches!")
             .addInfo("Input liquid nuclear fuel or liquid naquadah fuel")
             .addSeparator()
             .addInfo(
@@ -419,11 +414,11 @@ public class MTELargeNaquadahReactor extends TTMultiblockBase implements ISurviv
             .addController("Front bottom center")
             .addCasingInfoMin("Naquadah Reactor Casing", 130, false)
             .addCasingInfoExactly("Field Restriction Casing", 81, false)
-            .addCasingInfoExactly("Radiation Proof Steel Frame Box", 36, false)
-            .addDynamoHatch("Any Naquadah Reactor Casing, only accepts ONE!")
-            .addInputHatch("Any Naquadah Reactor Casing")
-            .addOutputHatch("Any Naquadah Reactor Casing")
-            .addMaintenanceHatch("Any Naquadah Reactor Casing")
+            .addCasingInfoExactly("Radiation Proof Steel Frame Box", 32, false)
+            .addDynamoHatch("Any Naquadah Reactor Casing, only accepts ONE!", 1)
+            .addInputHatch("Any Naquadah Reactor Casing", 1)
+            .addOutputHatch("Any Naquadah Reactor Casing", 1)
+            .addMaintenanceHatch("Any Naquadah Reactor Casing", 1)
             .addStructureAuthors(EnumChatFormatting.GOLD + "N7Paddy")
             .toolTipFinisher();
         return tt;

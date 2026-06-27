@@ -50,6 +50,7 @@ import gregtech.api.interfaces.tileentity.IGregTechTileEntity;
 import gregtech.api.logic.ProcessingLogic;
 import gregtech.api.recipe.RecipeMap;
 import gregtech.api.recipe.RecipeMaps;
+import gregtech.api.structure.error.StructureError;
 import gregtech.api.util.GTUtility;
 import gregtech.api.util.MultiblockTooltipBuilder;
 import gregtech.api.util.tooltip.TooltipHelper;
@@ -119,8 +120,7 @@ public class MTEIndustrialForgeHammerLegacy extends GTPPMultiBlockBase<MTEIndust
             .addMufflerHatch("Any Casing", 1)
             .addOtherStructurePart(
                 StatCollector.translateToLocal("GTPP.tooltip.structure.anvil"),
-                "In the center of 3x3x3 structure",
-                2)
+                "In the center of 3x3x3 structure")
             .toolTipFinisher();
         return tt;
     }
@@ -194,9 +194,11 @@ public class MTEIndustrialForgeHammerLegacy extends GTPPMultiBlockBase<MTEIndust
     }
 
     @Override
-    public boolean checkMachine(IGregTechTileEntity aBaseMetaTileEntity, ItemStack aStack) {
+    public void checkMachine(IGregTechTileEntity aBaseMetaTileEntity, ItemStack aStack, List<StructureError> errors) {
         mCasing = 0;
-        return checkPiece(mName, 1, 1, 0) && mCasing >= 6 && checkHatch();
+        if (!checkPiece(mName, 1, 1, 0, errors)) return;
+        checkCasingMin(errors, mCasing, 6);
+        checkHatch(errors);
     }
 
     @Override

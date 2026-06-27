@@ -6,6 +6,7 @@ import static gregtech.api.enums.GTValues.VN;
 import static gregtech.api.enums.Textures.BlockIcons.OVERLAY_ME_INPUT_FLUID_HATCH;
 import static gregtech.api.enums.Textures.BlockIcons.OVERLAY_ME_INPUT_FLUID_HATCH_ACTIVE;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Iterator;
@@ -109,6 +110,7 @@ public class MTEHatchInputME extends MTEHatchInput implements IPowerChannelState
     protected boolean processingRecipe = false;
     private boolean justHadNewFluids = false;
     private boolean expediteRecipeCheck = false;
+    private final List<IHatchWatcher> watchers = new ArrayList<>();
     /**
      * The cached activity for this hatch. Only valid while processing a recipe. This avoids several
      * operations.
@@ -148,6 +150,12 @@ public class MTEHatchInputME extends MTEHatchInput implements IPowerChannelState
         if (aBaseMetaTileEntity.isServerSide()) {
             if (aTimer % autoPullRefreshTime == 0 && autoPullFluidList) {
                 refreshFluidList();
+                if (justHadNewFluids && expediteRecipeCheck) {
+                    for (var multi : watchers) {
+                        multi.scheduleRecipeCheckImmediate();
+                    }
+                    justHadNewFluids = false;
+                }
             }
             if (aTimer % 20 == 0) {
                 aBaseMetaTileEntity.setActive(isActive());
@@ -343,13 +351,13 @@ public class MTEHatchInputME extends MTEHatchInput implements IPowerChannelState
     }
 
     @Override
-    public boolean justUpdated() {
-        if (expediteRecipeCheck && isAllowedToWork()) {
-            boolean ret = justHadNewFluids;
-            justHadNewFluids = false;
-            return ret;
-        }
-        return false;
+    public void addWatcher(IHatchWatcher watcher) {
+        watchers.add(watcher);
+    }
+
+    @Override
+    public void removeWatcher(IHatchWatcher watcher) {
+        watchers.remove(watcher);
     }
 
     public void setRecipeCheck(boolean value) {
@@ -365,6 +373,11 @@ public class MTEHatchInputME extends MTEHatchInput implements IPowerChannelState
 
     @Override
     public FluidStack drain(ForgeDirection side, FluidStack fluid, boolean doDrain) {
+        return drain(side, fluid, fluid == null ? 0 : fluid.amount, doDrain);
+    }
+
+    @Override
+    public FluidStack drain(ForgeDirection side, FluidStack fluid, int amount, boolean doDrain) {
         // this is an ME input hatch. allowing draining via logistics would be very wrong (and against
         // canTankBeEmptied()) but we do need to support draining from controller, which uses the UNKNOWN direction.
         if (side != ForgeDirection.UNKNOWN) return null;
@@ -374,7 +387,7 @@ public class MTEHatchInputME extends MTEHatchInput implements IPowerChannelState
             Slot slot = getMatchingSlot(fluid, true);
             if (slot == null) return null;
 
-            int toDrain = Math.min(slot.extracted.amount, fluid.amount);
+            int toDrain = Math.min(slot.extracted.amount, amount);
 
             FluidStack drained = GTUtility.copyAmount(toDrain, slot.extracted);
 
@@ -389,6 +402,7 @@ public class MTEHatchInputME extends MTEHatchInput implements IPowerChannelState
             if (slot == null) return null;
 
             IAEFluidStack request = AEFluidStack.create(fluid);
+            request.setStackSize(amount);
 
             IMEMonitor<IAEFluidStack> sg;
             IEnergyGrid energy;
@@ -517,7 +531,8 @@ public class MTEHatchInputME extends MTEHatchInput implements IPowerChannelState
     @Override
     public @NotNull AENetworkProxy getProxy() {
         if (gridProxy == null) {
-            if (getBaseMetaTileEntity() instanceof IGridProxyable) {
+            var base = getBaseMetaTileEntity();
+            if (base instanceof IGridProxyable) {
                 gridProxy = new AENetworkProxy(
                     this,
                     "proxy",
@@ -525,9 +540,11 @@ public class MTEHatchInputME extends MTEHatchInput implements IPowerChannelState
                     true);
                 gridProxy.setFlags(GridFlags.REQUIRE_CHANNEL);
                 updateValidGridProxySides();
-                if (getBaseMetaTileEntity().getWorld() != null) gridProxy.setOwner(
-                    getBaseMetaTileEntity().getWorld()
-                        .getPlayerEntityByName(getBaseMetaTileEntity().getOwnerName()));
+                if (base.getWorld() != null && base.getOwnerUuid() != null) {
+                    gridProxy.setOwner(
+                        base.getWorld()
+                            .func_152378_a(base.getOwnerUuid()));
+                }
             }
         }
         return this.gridProxy;
@@ -594,7 +611,6 @@ public class MTEHatchInputME extends MTEHatchInput implements IPowerChannelState
         }
     }
 
-    @Override
     public boolean doFastRecipeCheck() {
         return expediteRecipeCheck;
     }
@@ -791,6 +807,7 @@ public class MTEHatchInputME extends MTEHatchInput implements IPowerChannelState
                     for (int i = 0; i < c; i++) {
                         NBTTagCompound nbtTagCompound = nbtTagList.getCompoundTagAt(i);
                         FluidStack fluidStack = GTUtility.loadFluid(nbtTagCompound);
+                        if (fluidStack == null) continue;
 
                         Slot slot = new Slot(fluidStack);
                         slots[i] = slot;
@@ -851,7 +868,9 @@ public class MTEHatchInputME extends MTEHatchInput implements IPowerChannelState
 
             clearSlotConfigs();
             for (int i = 0; i < stockingFluids.tagCount(); i++) {
-                slots[i] = new Slot(GTUtility.loadFluid(stockingFluids.getCompoundTagAt(i)));
+                final FluidStack fs = GTUtility.loadFluid(stockingFluids.getCompoundTagAt(i));
+                if (fs == null) continue;
+                slots[i] = new Slot(fs);
             }
         }
 
@@ -993,7 +1012,7 @@ public class MTEHatchInputME extends MTEHatchInput implements IPowerChannelState
         }
 
         public Slot copy() {
-            Slot copy = new Slot(this.config);
+            Slot copy = new Slot(this.config.copy());
 
             copy.extracted = this.extracted;
             copy.extractedAmount = this.extractedAmount;
@@ -1021,11 +1040,6 @@ public class MTEHatchInputME extends MTEHatchInput implements IPowerChannelState
 
             return slot;
         }
-    }
-
-    @Override
-    protected boolean useMui2() {
-        return true;
     }
 
     @Override
